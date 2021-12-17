@@ -53,13 +53,16 @@ jobs:
           script/install_redis.sh 4.0.10
           script/install_dynamodb_local.sh
 
-      - name: Run tests
+      - name: Run stores
         run: |
           ./consul agent -server -bootstrap -advertise=127.0.0.1 -data-dir /tmp/consul -config-file=./config.json 1>/dev/null &
           ./etcd/etcd --listen-client-urls 'http://0.0.0.0:4001' --advertise-client-urls 'http://127.0.0.1:4001' >/dev/null 2>&1 &
           ./zk/bin/zkServer.sh start ./zk/conf/zoo.cfg 1> /dev/null
           ./redis/src/redis-server &
           java -Djava.library.path=./DynamoDBLocal_lib -jar DynamoDBLocal.jar -inMemory &
+
+      - name: Run tests
+        run: |
           script/validate-gofmt
           go vet ./...
           fgt golint ./...
@@ -68,5 +71,5 @@ jobs:
       - name: Coverage report
         continue-on-error: true
         run: |
-          script/coverage || true
-          goveralls -service=github -coverprofile=goverage.report
+          script/coverage
+          goveralls -service=github -coverprofile=goveralls.report -repotoken ${{ secrets.COVERALLS_TOKEN }}
